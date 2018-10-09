@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
-import sys, time, random
-import httplib, socket
+import time
+import httplib
 import threading
+import ssl
+import traceback
 
 def GetKeyValue(s='abc:123', keyword='abc:', End=' '):
         if s.find(keyword)!=-1:
@@ -101,22 +103,23 @@ class taskTools:
         while threading.activeCount() != self.threadCount:
             time.sleep(3)            
         #self.ifFinished = 1
-        print '[task finihed]'
+        print '\n\n[task finihed]'
         #print进入sys.stdout后，可以传递给class Widget，从而将停止“按钮”复位成“执行任务”
         self.endtime = time.time()
-        print "\n>>>TEST over! [%s] RESULT<<<: \n Pass Time %s second"%(time.ctime(self.endtime), 
+        print "########    TEST over! [%s] RESULT    ########\n#    Pass Time %s second"%(time.ctime(self.endtime),
                                                                         (self.endtime-self.starttime)) 
         if self.statisticDic:
             for k in self.statisticDic.keys():
-                print '[%s: %s] hit counts: %d'%(self.statisticKeyword, 
+                print '#    [%s: %s] hit counts: %d'%(self.statisticHttpHeader,
                                                 k, self.statisticDic[k])     
-        print "keyword %s appears %d times"%(self.statisticKeyword, self.statisticCountOfKeyword)
+        print "#    keyword %s appears %d times"%(self.statisticKeyword, self.statisticCountOfKeyword)
+        print "####################################################################"
     def http_con(self, sourceIp = ''):
         if sourceIp:
             conn = httplib.HTTPConnection(self.target[0],
                                           self.target[1],
                                           timeout=self.sockTimeOut,
-                                          source_address = (sourceIp, random.randint(10000, 60000)))
+                                          source_address = (sourceIp, 0))
         else:
             conn = httplib.HTTPConnection(self.target[0],
                                           self.target[1],
@@ -163,28 +166,41 @@ class taskTools:
         for url in self.URLList:
             prot, host, uri = url_parse(url)
             self.http_headers['Host'] = host
-            if sourceIp:
-                conn = httplib.HTTPConnection(self.target[0],
-                                              self.target[1],
-                                              timeout=self.sockTimeOut,
-                                              source_address=(sourceIp, random.randint(10000, 60000)))
+            if prot == 'https':
+                ssl._create_default_https_context = ssl._create_unverified_context
+                if sourceIp:
+                    conn = httplib.HTTPSConnection(self.target[0],
+                                                  self.target[1],
+                                                  timeout=self.sockTimeOut,
+                                                  source_address=(sourceIp, 0))
+                else:
+                    conn = httplib.HTTPSConnection(self.target[0],
+                                                  self.target[1],
+                                                  timeout = self.sockTimeOut)
             else:
-                conn = httplib.HTTPConnection(self.target[0],
-                                              self.target[1],
-                                              timeout = self.sockTimeOut)
+                if sourceIp:
+                    conn = httplib.HTTPConnection(self.target[0],
+                                                  self.target[1],
+                                                  timeout=self.sockTimeOut,
+                                                  source_address=(sourceIp, 0))
+                else:
+                    conn = httplib.HTTPConnection(self.target[0],
+                                                  self.target[1],
+                                                  timeout = self.sockTimeOut)
             try:
                 if self.method == 'POST' or self.method=='PUT':
                     conn.request(self.method, uri, body=self.postData, headers=self.http_headers)
                 else:
                     conn.request(self.method, uri, headers = self.http_headers)
             except:
+                #traceback.print_exc()
                 self.if_print("the server %s is down!"%(self.target, ))
-                return
+                continue
             try:
                 res = conn.getresponse()
             except:
-                self.if_print('socket timeout!')
-                return
+                self.if_print('socket timeout or connection be reset!')
+                continue
             self.if_print('reason: %s\nstatus: %s'%(res.reason, res.status))
             res_header = res.getheaders()
             #统计功能。如果server回复的头部中有IP地址。（只在HTTP头部中搜寻Server-IP头部）
@@ -199,7 +215,8 @@ class taskTools:
             try:
                 temp = res.read()
             except:
-                return
+                self.if_print("recv data error!", 3)
+                continue
             if temp.find(self.statisticKeyword)!=-1:
                 self.statisticCountOfKeyword += 1
             self.if_print(temp, 2)
@@ -208,9 +225,9 @@ class taskTools:
             conn.close()
         
 if __name__ == '__main__':
-    print url_parse('http://192.168.10.1:80/abc/1.html')
-    t = taskTools(target = ('192.168.10.1', 80), reqMethod='POST', postData = '123=789&abc=345',
-                  URLList= ['http://www.baidu.com/1.php', 'http://www.host.com/abc/2.php'])
+    print url_parse('https://192.168.10.1:80/abc/1.html')
+    t = taskTools(target = ('192.168.10.105', 443), reqMethod='POST', postData = '123=789&abc=345',
+                  URLList= ['https://www.baidu.com/1.php'])
     t.run()
 
 
