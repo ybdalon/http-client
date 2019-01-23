@@ -37,7 +37,7 @@ def url_parse(url):
     else:
         return '', '', ''
 
-class taskTools:
+class taskTools(object):
     def __init__(self, target = ('127.0.0.1', 8000),  runCount = 1, interv = 0.1, 
                  reqMethod = 'GET', postData = '',  URLList = ['http://127.0.0.1:8000'], sourceIPs = []):
         self.target = target
@@ -103,8 +103,9 @@ class taskTools:
         while threading.activeCount() != self.threadCount:
             time.sleep(3)            
         #self.ifFinished = 1
-        print '\n\n[task finihed]'
+        print '[task finihed]'
         #print进入sys.stdout后，可以传递给class Widget，从而将停止“按钮”复位成“执行任务”
+        print "\n\n"
         self.endtime = time.time()
         print "########    TEST over! [%s] RESULT    ########\n#    Pass Time %s second"%(time.ctime(self.endtime),
                                                                         (self.endtime-self.starttime)) 
